@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cuentacuentos: lectura fácil</title>
+<style>
+:root{--bg:#F0E7D6;--tx:#120F0F;--card:#FAF4E8;--p:#FF5B25;--s:#6D8EEB;--g:#51BF56;--line:#d9ccb3}
+:root[data-theme="azul"]{--bg:#DCE6F7;--card:#EEF3FC;--line:#b9c8e6}
+:root[data-theme="verde"]{--bg:#DDEFD9;--card:#EEF8EB;--line:#b8d6b2}
+:root[data-theme="oscuro"]{--bg:#1B1A1A;--tx:#E8E0D0;--card:#2A2827;--line:#454240}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:#cfc6b4;font-family:Verdana,Geneva,sans-serif;font-size:16px;line-height:1.6;letter-spacing:.04em;color:var(--tx);text-align:left}
+#app{max-width:430px;height:100%;margin:0 auto;background:var(--bg);display:flex;flex-direction:column;position:relative;padding-top:env(safe-area-inset-top,0px)}
+.scr{flex:1;overflow-y:auto;padding:16px 16px 24px}
+.hide{display:none!important}
+button{font:inherit;letter-spacing:inherit;color:inherit}
+h1{font-size:1.4rem;line-height:1.3;margin:4px 0 4px}
+h2{font-size:1.1rem;margin:22px 0 10px}
+.lead{margin:0 0 6px}
+.row{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x mandatory}
+.card{flex:0 0 150px;scroll-snap-align:start;background:var(--card);border:3px solid var(--line);border-radius:18px;padding:0;cursor:pointer;text-align:left;overflow:hidden;position:relative}
+.card:focus-visible,.card:hover{border-color:var(--p);outline:none}
+.card svg{display:block;width:100%;height:auto}
+.card b{display:block;padding:8px 10px 12px;font-size:.85rem;line-height:1.4}
+.tag{position:absolute;top:6px;right:6px;background:var(--card);border-radius:10px;padding:0 7px;font-size:.8rem}
+.lib .card{flex:none;width:100%;display:flex;align-items:center}
+.lib .card svg{width:90px;flex:none}
+.lib .card b{font-size:.95rem}
+.lib{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+.seg{display:flex;gap:6px;margin-top:12px}
+.seg button{flex:1;border:3px solid var(--line);background:var(--card);border-radius:14px;padding:8px 2px;font-size:.78rem;cursor:pointer;min-height:44px}
+.seg button[aria-pressed="true"]{background:var(--s);border-color:var(--s);color:#120F0F;font-weight:bold}
+.empty{background:var(--card);border-radius:14px;padding:14px;margin-top:14px}
+nav{display:flex;border-top:3px solid var(--line);background:var(--card);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav button{flex:1;background:none;border:0;padding:10px 4px;cursor:pointer;min-height:56px;font-size:.85rem}
+nav button[aria-current="true"]{font-weight:bold;color:var(--p)}
+nav span{display:block;font-size:1.3rem;line-height:1.2}
+.btn{background:var(--p);color:#120F0F;border:0;border-radius:14px;padding:10px 16px;font-weight:bold;cursor:pointer;min-height:44px}
+.btn.alt{background:var(--s)}
+.btn:focus-visible,.sw:focus-visible,.seg button:focus-visible,nav button:focus-visible{outline:3px solid var(--tx);outline-offset:2px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--card);border:3px solid var(--line);border-radius:16px;padding:8px 10px;margin:12px 0 16px}
+.lbl{font-size:.8rem}
+.sep{flex:1}
+.sw{width:40px;height:40px;border-radius:50%;border:3px solid var(--line);cursor:pointer}
+.sw[aria-pressed="true"]{border-color:var(--p);box-shadow:0 0 0 3px var(--p)}
+article p{margin:0 0 1.2em;padding:8px 10px;border-radius:12px;border-left:6px solid transparent;cursor:pointer}
+article p.on{background:var(--card);border-left-color:var(--g)}
+.hint{font-size:.8rem;margin:0 0 12px}
+.done{margin:10px 0 0}
+.modal{position:absolute;inset:0;background:var(--bg);z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:left;gap:14px}
+.modal svg{width:140px;height:140px}
+</style>
+</head>
+<body>
+<div id="app">
+
+<main class="scr" id="home">
+  <h1>Hola, lector</h1>
+  <p class="lead">Elige un cuento para leer hoy.</p>
+  <div id="cats"></div>
+</main>
+
+<main class="scr hide" id="lib">
+  <h1>Mi biblioteca</h1>
+  <div class="seg" id="seg">
+    <button data-k="leidos">Leídos</button>
+    <button data-k="proceso">En proceso</button>
+    <button data-k="favs">Favoritos</button>
+  </div>
+  <div class="lib" id="libList"></div>
+</main>
+
+<main class="scr hide" id="read">
+  <div class="top">
+    <button class="btn alt" id="back">← Volver</button>
+    <button class="btn" id="fav" aria-pressed="false"></button>
+  </div>
+  <div class="bar" role="group" aria-label="Ajustes de lectura">
+    <span class="lbl">Letra</span>
+    <button class="btn" id="minus" aria-label="Letra más pequeña">A−</button>
+    <button class="btn" id="plus" aria-label="Letra más grande">A+</button>
+    <span class="sep"></span>
+    <button class="sw" data-t="crema" aria-label="Fondo crema" style="background:#F0E7D6"></button>
+    <button class="sw" data-t="azul" aria-label="Fondo azul claro" style="background:#DCE6F7"></button>
+    <button class="sw" data-t="verde" aria-label="Fondo verde claro" style="background:#DDEFD9"></button>
+    <button class="sw" data-t="oscuro" aria-label="Modo oscuro" style="background:#1B1A1A"></button>
+  </div>
+  <h1 id="title"></h1>
+  <p class="hint">Toca cada párrafo cuando lo termines.</p>
+  <article id="text"></article>
+  <div class="done hide" id="done"><button class="btn" id="finish">¡He terminado el cuento!</button></div>
+</main>
+
+<nav id="nav">
+  <button data-v="home" aria-current="true"><span>🏠</span>Inicio</button>
+  <button data-v="lib"><span>📚</span>Biblioteca</button>
+</nav>
+
+<div class="modal hide" id="modal" role="dialog" aria-live="polite">
+  <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="44" fill="#FF5B25"/><path d="M50 22l8 18 20 2-15 13 5 20-18-10-18 10 5-20-15-13 20-2z" fill="#F0E7D6"/></svg>
+  <h1>¡Enhorabuena!</h1>
+  <p class="lead">Has terminado el cuento. Tu esfuerzo ha sido genial. Cada día lees un poco mejor.</p>
+  <button class="btn" id="toHome">Volver al inicio</button>
+</div>
+
+</div>
+<script>
+var stories=[
+{c:"Animales",t:"El dragón miedoso",k:"#FF5B25",b:"#FBD9C8",f:0,p:["Había una vez un dragón pequeño llamado Pico.","A Pico le daba miedo su propio fuego. Cada vez que estornudaba, salía una chispa.","Un día, un gatito tenía frío en la nieve. Pico respiró muy suave.","Salió una llama pequeña y cálida. El gatito se calentó y ronroneó.","Desde ese día, Pico ya no tuvo miedo. Su fuego servía para ayudar."]},
+{c:"Animales",t:"La luna y el pez",k:"#6D8EEB",b:"#D5E0FA",f:1,p:["En un lago muy tranquilo vivía un pez llamado Nilo.","Cada noche veía la luna en el agua y quería tocarla.","Nilo nadó hasta el fondo y saltó muy alto. Splash.","No logró tocar la luna, pero vio miles de estrellas.","Entendió que la luna estaba lejos, pero siempre lo acompañaba."]},
+{c:"Aventuras",t:"El mapa del pirata Tito",k:"#FF5B25",b:"#F6E3C0",f:2,p:["Tito era un pirata muy pequeño con un barco muy grande.","Un día encontró un mapa dentro de una botella.","Siguió las pistas por la playa, la cueva y la colina.","El tesoro era un cofre lleno de libros. Tito sonrió y empezó a leer."]},
+{c:"Aventuras",t:"El cohete de Marta",k:"#6D8EEB",b:"#CFD6F2",f:3,p:["Marta construyó un cohete con cajas de cartón.","Contó hasta diez muy despacio: tres, dos, uno. ¡Despegue!","Voló entre planetas de colores y saludó a una estrella.","Volvió a casa a tiempo para cenar y contó su viaje a todos."]},
+{c:"Naturaleza",t:"El bosque de los abrazos",k:"#51BF56",b:"#D3EFD0",f:4,p:["En el bosque había un árbol muy grande y muy solo.","Los pájaros pasaban de largo porque sus ramas parecían duras.","Una niña llamada Lía se acercó y abrazó el tronco.","El árbol movió sus hojas despacio. Desde entonces, todos venían a su sombra."]},
+{c:"Naturaleza",t:"La gota viajera",k:"#6D8EEB",b:"#DCEBF7",f:5,p:["Una gota de agua vivía en una nube gris.","Cayó sobre una montaña y bajó por un río.","Llegó al mar, el sol la calentó y subió de nuevo al cielo.","Así la gota viajó una y otra vez, sin cansarse nunca."]}
+];
+var S={leidos:{},proceso:{},favs:{}},size=20,cur=0,seen=0,tab='leidos';
+try{var x=JSON.parse(localStorage.getItem('cuentos-v1'));if(x)S=x}catch(e){}
+function save(){try{localStorage.setItem('cuentos-v1',JSON.stringify(S))}catch(e){}}
+var $=function(i){return document.getElementById(i)};
+function cover(s){
+ var d=['<circle cx="100" cy="85" r="34" fill="'+s.k+'"/><circle cx="90" cy="78" r="5" fill="#120F0F"/><path d="M130 85l30-10-6 14z" fill="#FF5B25"/>',
+ '<circle cx="150" cy="45" r="24" fill="#F6E9A8"/><ellipse cx="90" cy="100" rx="40" ry="22" fill="'+s.k+'"/><path d="M128 100l26-18v36z" fill="'+s.k+'"/><circle cx="72" cy="94" r="4" fill="#120F0F"/>',
+ '<path d="M50 105h100l-14 30H64z" fill="#8A5A3A"/><rect x="98" y="40" width="4" height="65" fill="#120F0F"/><path d="M102 44l36 30h-36z" fill="'+s.k+'"/>',
+ '<path d="M100 30q24 30 14 80H86q-10-50 14-80z" fill="'+s.k+'"/><circle cx="100" cy="70" r="9" fill="#F0E7D6"/><path d="M86 110l-14 20 20-8zM114 110l14 20-20-8z" fill="#FF5B25"/>',
+ '<rect x="92" y="90" width="16" height="50" fill="#8A5A3A"/><circle cx="100" cy="68" r="38" fill="'+s.k+'"/><circle cx="84" cy="62" r="4" fill="#120F0F"/><circle cx="116" cy="62" r="4" fill="#120F0F"/>',
+ '<path d="M100 30q36 50 0 80q-36-30 0-80z" fill="'+s.k+'"/><circle cx="90" cy="85" r="5" fill="#F0E7D6"/>'][s.f];
+ return '<svg viewBox="0 0 200 150" role="img" aria-label="Dibujo del cuento"><rect width="200" height="150" fill="'+s.b+'"/>'+d+'</svg>';
+}
+function card(i,tag){
+ var s=stories[i],b=document.createElement('button');b.className='card';
+ b.innerHTML=cover(s)+'<b>'+s.t+'</b>'+(tag?'<span class="tag">'+tag+'</span>':'');
+ b.onclick=function(){openStory(i)};return b;
+}
+function tagOf(i){return (S.favs[i]?'♥ ':'')+(S.leidos[i]?'✓':'')}
+function renderHome(){
+ var h=$('cats');h.innerHTML='';
+ ['Animales','Aventuras','Naturaleza'].forEach(function(c){
+  var t=document.createElement('h2');t.textContent=c;h.appendChild(t);
+  var r=document.createElement('div');r.className='row';
+  stories.forEach(function(s,i){if(s.c===c)r.appendChild(card(i,tagOf(i)))});
+  h.appendChild(r);
+ });
+}
+function renderLib(){
+ [].forEach.call($('seg').children,function(b){b.setAttribute('aria-pressed',b.dataset.k===tab)});
+ var l=$('libList');l.innerHTML='';var n=0;
+ stories.forEach(function(s,i){
+  if(S[tab][i]!==undefined&&S[tab][i]!==false){
+   n++;var c=card(i,tab==='proceso'?Math.round((S.proceso[i]+1)/s.p.length*100)+'%':'');l.appendChild(c);
+  }});
+ if(!n){var e=document.createElement('div');e.className='empty';
+  e.textContent={leidos:'Aún no has terminado ningún cuento.',proceso:'No tienes cuentos empezados.',favs:'Aún no tienes favoritos. Toca el corazón al leer.'}[tab];l.appendChild(e)}
+}
+function show(v){
+ ['home','lib','read'].forEach(function(k){$(k).classList.toggle('hide',k!==v)});
+ $('nav').classList.toggle('hide',v==='read');
+ [].forEach.call($('nav').children,function(b){b.setAttribute('aria-current',b.dataset.v===v)});
+ if(v==='home')renderHome();if(v==='lib')renderLib();
+}
+function favLabel(){var f=!!S.favs[cur];$('fav').setAttribute('aria-pressed',f);$('fav').textContent=f?'♥ Favorito':'♡ Favorito'}
+function openStory(i){
+ cur=i;var s=stories[i];$('title').textContent=s.t;
+ var a=$('text');a.innerHTML='';a.style.fontSize=size+'px';
+ var start=S.proceso[i]!==undefined?S.proceso[i]:-1;
+ s.p.forEach(function(x,k){
+  var p=document.createElement('p');p.textContent=x;if(k===start)p.classList.add('on');
+  p.onclick=function(){
+   [].forEach.call(a.children,function(c){c.classList.remove('on')});p.classList.add('on');
+   if(!S.leidos[i]&&k<s.p.length-1){S.proceso[i]=k;save()}
+   $('done').classList.toggle('hide',k!==s.p.length-1);
+  };a.appendChild(p);
+ });
+ $('done').classList.toggle('hide',start!==s.p.length-1);
+ favLabel();show('read');$('read').scrollTop=0;
+}
+$('fav').onclick=function(){if(S.favs[cur])delete S.favs[cur];else S.favs[cur]=true;save();favLabel()};
+$('back').onclick=function(){show('home')};
+$('finish').onclick=function(){S.leidos[cur]=true;delete S.proceso[cur];save();$('modal').classList.remove('hide')};
+$('toHome').onclick=function(){$('modal').classList.add('hide');show('home')};
+$('minus').onclick=function(){size=Math.max(16,size-2);$('text').style.fontSize=size+'px'};
+$('plus').onclick=function(){size=Math.min(34,size+2);$('text').style.fontSize=size+'px'};
+[].forEach.call($('nav').children,function(b){b.onclick=function(){show(b.dataset.v)}});
+[].forEach.call($('seg').children,function(b){b.onclick=function(){tab=b.dataset.k;renderLib()}});
+var sw=document.querySelectorAll('.sw');
+function theme(t){document.documentElement.setAttribute('data-theme',t);[].forEach.call(sw,function(b){b.setAttribute('aria-pressed',b.dataset.t===t)})}
+[].forEach.call(sw,function(b){b.onclick=function(){theme(b.dataset.t)}});
+theme('crema');show('home');
+</script>
+</body>
+</html>
